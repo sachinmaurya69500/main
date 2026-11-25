@@ -661,11 +661,20 @@ def _fetch_feed(feed_url):
     if parsed_url.scheme != "https" or not parsed_url.netloc:
         raise ValueError("Configured news feeds must use HTTPS.")
     request_object = Request(feed_url, headers={"User-Agent": "CyberAwarenessPortal/1.0"})
-    with urlopen(
-        request_object,
-        timeout=current_app.config["NEWS_REQUEST_TIMEOUT"],
-        context=_HTTPS_CONTEXT,
-    ) as response:
+    try:
+        response = urlopen(
+            request_object,
+            timeout=current_app.config["NEWS_REQUEST_TIMEOUT"],
+            context=_HTTPS_CONTEXT,
+        )
+    except TypeError as exc:
+        if "unexpected keyword argument 'context'" not in str(exc):
+            raise
+        response = urlopen(
+            request_object,
+            timeout=current_app.config["NEWS_REQUEST_TIMEOUT"],
+        )
+    with response:
         payload = response.read(2_000_001)
     if len(payload) > 2_000_000:
         raise ValueError("The configured feed exceeds the 2 MB size limit.")
